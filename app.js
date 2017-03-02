@@ -54,7 +54,7 @@ const watsonConversation = watson.conversation({
   version: 'v1',
   version_date: '2016-05-19',
 });
-const watsonVisualRecognition = watson.VisualRecognitionV3({
+const watsonVisualRecognition = watson.visual_recognition({
   api_key: process.env.WATSON_RECOGNITION_API_KEY,
   version: 'v3',
   version_date: '2016-05-19',

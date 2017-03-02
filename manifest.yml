@@ -2,12 +2,13 @@ applications:
 - path: .
   memory: 256M
   instances: 1
-  domain: eu-gb.mybluemix.net
-  name: your-app-name
+  domain: mybluemix.net
+  name: your-app-name-reece
   disk_quota: 512M
   env:
     WATSON_CONVERSATION_USERNAME: 'your convo username'
     WATSON_CONVERSATION_PASSWORD: 'your convo password'
+    WATSON_RECOGNITION_API_KEY: 'some key'
     WATSON_WORKSPACE_ID: 'your workspace id'
     FACEBOOK_PAGE_TOKEN: 'your facebook page token'
     FACEBOOK_VERIFY_TOKEN: 'your facebook verify token'
