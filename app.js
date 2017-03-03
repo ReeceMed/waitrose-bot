@@ -1,8 +1,9 @@
-
 const Botmaster = require('botmaster');
 const express = require('express');
 const R = require('ramda');
-const {fulfillOutgoingWare} = require('botmaster-fulfill');
+const {
+    fulfillOutgoingWare
+} = require('botmaster-fulfill');
 const standardActions = require('botmaster-fulfill-actions');
 const watsonConversationStorageMiddleware = require('./watson_conversation_storage_middleware');
 const watson = require('watson-developer-cloud');
@@ -35,7 +36,7 @@ const myActions = {
         },
     },
     locButton: {
-        controller: () => {
+        controller: (params) => {
             params.message.message.quick_replies.push({
                 content_type: 'location',
             });
@@ -49,112 +50,125 @@ const actions = R.merge(standardActions, myActions);
 const appEnv = cfenv.getAppEnv();
 
 const watsonConversation = watson.conversation({
-  username: process.env.WATSON_CONVERSATION_USERNAME,
-  password: process.env.WATSON_CONVERSATION_PASSWORD,
-  version: 'v1',
-  version_date: '2016-05-19',
+    username: '7f459c21-aaa9-47d5-ab83-996674317e8d',
+    password: 'GUIQv5IekT2Q',
+    version: 'v1',
+    version_date: '2016-05-19',
 });
 const watsonVisualRecognition = watson.visual_recognition({
-  api_key: process.env.WATSON_RECOGNITION_API_KEY,
-  version: 'v3',
-  version_date: '2016-05-19',
+    api_key: '83e7ee60dac2596dd8f6f5819d713c04ea485093',
+    version: 'v3',
+    version_date: '2016-05-19',
 });
 
 const messengerSettings = {
-  credentials: {
-    verifyToken: process.env.FACEBOOK_VERIFY_TOKEN,
-    pageToken: process.env.FACEBOOK_PAGE_TOKEN,
-    fbAppSecret: process.env.FACEBOOK_APP_SECRET,
-  },
-  // !! see Readme if you have any issues with understanding webhooks
-  webhookEndpoint: '/webhook',
+    credentials: {
+        verifyToken: 'reece',
+        pageToken: 'EAAIlMV2LmY0BAG6dCM03HWMbxpThXZC4nFamDNrvFZAIxT998tSJGzj1aXR31YBM8HrrDUTLKixjHziJLhtsZCCJqXG0ccojGpHmOsPpzaabSopjG6unsyViamxSW2gCvGjawEVV0TcHjGVJ0j0ZBRIo7ay67YPPQlAVOa5ZBDAZDZD',
+        fbAppSecret: 'eaf5ad0eeb77248b89150f642263d236',
+    },
+    // !! see Readme if you have any issues with understanding webhooks
+    webhookEndpoint: '/webhook',
 };
 
-const botsSettings = [{ messenger: messengerSettings }];
+const botsSettings = [{
+    messenger: messengerSettings
+}];
 
 const botmasterSettings = {
-  botsSettings,
-  app
+    botsSettings,
+    app
 };
 
 const botmaster = new Botmaster(botmasterSettings);
 
+botmaster.use('incoming', (bot, update, next) => {
+  console.log(`got update ${JSON.stringify(update, null, 2)}`);
+  next();
+});
+
 botmaster.use('incoming', watsonConversationStorageMiddleware.retrieveSession);
 
 botmaster.use('incoming', (bot, update, next) => {
-  if (!(update.attachments && update.attachments[0].image)) {
-    next();
-  }
-
-  const imageURL = update.attachments[0].payload.url;
-
-  const params = {
-    // must be a .zip file containing images
-    url: imageURL,
-  };
-
-  watsonVisualRecognition.classify(params, function(err, res) {
-    if (err) {
-      console.log(err);
-    } else {
-      console.log(JSON.stringify(res, null, 2));
-      next();
+    if (!(update.message.attachments && update.message.attachments[0].type === 'image')) {
+        next();
     }
-  });
+
+    const imageURL = update.message.attachments[0].payload.url;
+
+    const params = {
+        // must be a .zip file containing images
+        url: imageURL,
+    };
+
+    console.log('about to classify');
+    watsonVisualRecognition.classify(params, function(err, res) {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log('classified');
+            const imageClasses = res.images[0].classifiers[0].classes[0].class;
+            console.log('Context is')
+            console.log(JSON.stringify(update.session.context, null, 2));
+            if (!update.session.context)
+                update.session.context = {};
+            update.session.context.imageClasses = imageClasses;
+
+            //console.log('Res is now')
+            //console.log(JSON.stringify(res, null, 2));
+
+            next();
+        }
+    });
 
 });
 
 botmaster.on('update', (bot, update) => {
-  console.log(update);
-  const messageForWatson = {
-    context: update.session.context,
-    workspace_id: process.env.WATSON_WORKSPACE_ID,
-    input: {
-      text: update.message.text,
-    },
-  };
-  watsonConversation.message(messageForWatson, (err, watsonUpdate) => {
-    watsonConversationStorageMiddleware.updateSession(update.sender.id, watsonUpdate);
-    const text = watsonUpdate.output.text[0];
-
-    if (watsonUpdate.output.action === 'weather') {
-      const requestOptions = {
-        url: 'https://twcservice.mybluemix.net/api/weather/v1/geocode/52.379189/4.899431/forecast/daily/3day.json?language=en-US&units=e',
-        auth: {
-          user: '68e5c50b-4f4f-4ea4-acff-bdc55a244a83',
-          pass: '72cQFTI93X',
-          sendImmediately: true,
-        },
-        json: true,
-      }
-      request(requestOptions)
-      .then((body) => {
-        const someText = body.forecasts[0].narrative;
-        return bot.reply(update, someText)
-
-      })
-
-      .catch((err) => {
-        console.log(err);
-      })
+    let messageForWatson;
+    if (!(update.message.attachments && update.message.attachments[0].type === 'image')) {
+        messageForWatson = {
+            context: update.session.context,
+            workspace_id: '60cfc3c6-1928-49b1-bc7f-80fb10165f27',
+            input: {
+                text: update.message.text,
+            },
+        };
     } else {
-    	const watsontext = watsonUpdate.output.text;
-     bot.sendTextCascadeTo(watsontext,update.sender.id)
+        messageForWatson = {
+            context: update.session.context,
+            workspace_id: '60cfc3c6-1928-49b1-bc7f-80fb10165f27',
+            input: {
+                text: '',
+            },
+        };
     }
-  });
+    watsonConversation.message(messageForWatson, (err, watsonUpdate) => {
+        if (err)
+            return console.log(err);
+        watsonConversationStorageMiddleware.updateSession(update.sender.id, watsonUpdate);
+
+        const watsontext = watsonUpdate.output.text;
+        bot.sendTextCascadeTo(watsontext, update.sender.id)
+    });
+
 });
 
 botmaster.use('outgoing', fulfillOutgoingWare({
-  actions
+    actions
 }));
+
+botmaster.use('outgoing', (bot, update, message, next) => {
+  console.log(`sending update ${JSON.stringify(message, null, 2)}`);
+  next();
+});
 
 const port = appEnv.isLocal ? 3000 : appEnv.port;
 app.listen(port, () => {
-  console.log(`app running on port ${port}`);
+    console.log(`app running on port ${port}`);
 });
 
 botmaster.on('error', (bot, err) => {
-  console.log(err.stack);
+    console.log(err.stack);
 });
 
 function getWeather(params) {
@@ -163,8 +177,8 @@ function getWeather(params) {
     const requestOptions = {
         url: 'https://twcservice.mybluemix.net/api/weather/v1/geocode/' + lat + '/' + long + '/forecast/daily/3day.json?language=en-US&units=e',
         auth: {
-            user: 'WEATHER_USER_ID',
-            pass: 'WEATHER_PASSWORD',
+            user: '68e5c50b-4f4f-4ea4-acff-bdc55a244a83',
+            pass: '72cQFTI93X',
             sendImmediately: true,
         },
         json: true,

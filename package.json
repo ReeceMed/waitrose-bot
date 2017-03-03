@@ -4,6 +4,7 @@
   "description": "botmaster",
   "main": "index.js",
   "scripts": {
+    "s": "nodemon app.js",
     "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "tunnel": "( while true; do lt -p 3000 -s yoursubdomain; done; )"
@@ -26,6 +27,11 @@
     "node": "7.x"
   },
   "devDependencies": {
-    "localtunnel": "^1.8.2"
+    "eslint": "^3.16.1",
+    "eslint-config-standard": "^7.0.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^2.1.1",
+    "localtunnel": "^1.8.2",
+    "nodemon": "^1.11.0"
   }
 }
